@@ -318,10 +318,6 @@ func (h *Hook) getDownloadURL(c *credentials) string {
 
 	qv := make(url.Values)
 	qv.Add("bitness", "64")
-	// only set the networkzone property when it is configured
-	if c.NetworkZone != "" {
-		qv.Add("networkZone", c.NetworkZone)
-	}
 	for _, t := range h.IncludeTechnologies {
 		qv.Add("include", t)
 	}
