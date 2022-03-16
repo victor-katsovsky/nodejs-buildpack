@@ -36,11 +36,12 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	//
 	//fmt.Println(proxy)
 
-	files, err := ioutil.ReadDir(stager.BuildDir())
+	wd, _ := os.Getwd()
+	files, err := ioutil.ReadDir(wd)
 	if err != nil {
 		return err
 	}
-	sl.Log.Info("listing content of: %s", stager.BuildDir())
+	sl.Log.Info("listing content of: %s", wd)
 	for _, file := range files {
 		sl.Log.Debug(file.Name())
 	}
