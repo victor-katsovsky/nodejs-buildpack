@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"fmt"
 	"github.com/cloudfoundry/libbuildpack"
 	"io/ioutil"
 	"os"
@@ -25,17 +24,17 @@ func init() {
 func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	sl.Log.Info("Hello from Sealights hook")
 
-	token := os.Getenv("SL_TOKEN")
-	bsid := os.Getenv("SL_BUILD_SESSION_ID")
-	proxy := os.Getenv("SL_PROXY")
-	if token == "" {
-		return fmt.Errorf("token cannot be empty (env SL_TOKEN)")
-	}
-	if bsid == "" {
-		return fmt.Errorf("token cannot be empty (env SL_BUILD_SESSION_ID)")
-	}
-
-	fmt.Println(proxy)
+	//token := os.Getenv("SL_TOKEN")
+	//bsid := os.Getenv("SL_BUILD_SESSION_ID")
+	//proxy := os.Getenv("SL_PROXY")
+	//if token == "" {
+	//	return fmt.Errorf("token cannot be empty (env SL_TOKEN)")
+	//}
+	//if bsid == "" {
+	//	return fmt.Errorf("token cannot be empty (env SL_BUILD_SESSION_ID)")
+	//}
+	//
+	//fmt.Println(proxy)
 
 	files, err := ioutil.ReadDir(stager.BuildDir())
 	if err != nil {
