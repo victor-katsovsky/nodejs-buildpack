@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/libbuildpack"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 type SealightsHook struct {
@@ -36,17 +37,14 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	//
 	//fmt.Println(proxy)
 
-	hn := os.Getenv("NODE_HOME")
-	files, err := ioutil.ReadDir(hn)
+	p, err := ioutil.ReadFile(filepath.Join(stager.BuildDir(), "package.json"))
 	if err != nil {
-		sl.Log.Info("no folder %s", hn)
+		sl.Log.Error("failed to load package json from %s", stager.BuildDir())
+
 		return err
 	}
-	sl.Log.Info("listing content of: %s", hn)
-	for _, file := range files {
-		sl.Log.Debug(file.Name())
-	}
-	return nil
+
+	stager.Logger().Info(string(p))
 
 	err = sl.Command.Execute(stager.BuildDir(), os.Stdout, os.Stderr, "npm", "install", "slnodejs")
 	if err != nil {
