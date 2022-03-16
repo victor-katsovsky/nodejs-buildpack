@@ -36,12 +36,13 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	//
 	//fmt.Println(proxy)
 
-	wd, _ := os.Getwd()
-	files, err := ioutil.ReadDir(wd)
+	hn := os.Getenv("NODE_HOME")
+	files, err := ioutil.ReadDir(hn)
 	if err != nil {
+		sl.Log.Info("no folder %s", hn)
 		return err
 	}
-	sl.Log.Info("listing content of: %s", wd)
+	sl.Log.Info("listing content of: %s", hn)
 	for _, file := range files {
 		sl.Log.Debug(file.Name())
 	}
