@@ -65,6 +65,8 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	final += " --useinitialcolor true "
 	final += app
 
+	sl.Log.Info("new command line: %s", final)
+
 	err = ioutil.WriteFile(filepath.Join(stager.BuildDir(), "Procfile"), []byte(final), 0700)
 	if err != nil {
 		sl.Log.Error("failed to write Procfile, error: %s", err)
