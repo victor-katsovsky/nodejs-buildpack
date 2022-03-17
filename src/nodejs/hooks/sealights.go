@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -44,7 +45,7 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 
 	fmt.Println(proxy)
 
-	bytes, err := ioutil.ReadFile("Procfile")
+	bytes, err := ioutil.ReadFile(filepath.Join(stager.BuildDir(), "Procfile"))
 	if err != nil {
 		sl.Log.Error("failed to read Procfile")
 		return err
