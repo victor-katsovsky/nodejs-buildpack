@@ -11,7 +11,7 @@ import (
 )
 
 //const sl_cli_template = "./node_modules/.bin/slnodejs run --token  <token> --buildsessionid <id>  --useinitialcolor true  --proxy <proxy> — index.js"
-const sl_cli_template = " ./node_modules/.bin/slnodejs run "
+const sl_cli_template = " node ./node_modules/.bin/slnodejs run "
 
 type SealightsHook struct {
 	libbuildpack.DefaultHook
