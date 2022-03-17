@@ -55,7 +55,7 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	web := splitted[0]
 	app := splitted[2]
 
-	fmt.Println("web [%s]", " app [%s]", web, app)
+	fmt.Println("web: ", web, "app: ", app)
 
 	final := web + sl_cli_template + fmt.Sprintf(" --token %s --buildsessionid %s ", token, bsid)
 	if proxy != "" {
@@ -65,7 +65,7 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	final += " --useinitialcolor true "
 	final += app
 
-	err = ioutil.WriteFile("Procfile", []byte(final), 0700)
+	err = ioutil.WriteFile(filepath.Join(stager.BuildDir(), "Procfile"), []byte(final), 0700)
 	if err != nil {
 		sl.Log.Error("failed to write Procfile, error: %s", err)
 		return err
