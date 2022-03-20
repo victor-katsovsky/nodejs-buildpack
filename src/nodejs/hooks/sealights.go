@@ -3,7 +3,6 @@ package hooks
 import (
 	"fmt"
 	"github.com/cloudfoundry/libbuildpack"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -29,21 +28,19 @@ func init() {
 }
 
 func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
-	sl.Log.Info("Hello from Sealights hook")
+	sl.Log.Info("Inside Sealights hook")
 
 	token := os.Getenv("SL_TOKEN")
 	bsid := os.Getenv("SL_BUILD_SESSION_ID")
 	proxy := os.Getenv("SL_PROXY")
 	if token == "" {
 		sl.Log.Error("token cannot be empty (env SL_TOKEN)")
-		return errors.New("empty token")
+		return fmt.Errorf("token cannot be empty (env SL_TOKEN)")
 	}
 	if bsid == "" {
-		sl.Log.Error("token cannot be empty (env SL_BUILD_SESSION_ID)")
-		return errors.New("empty bsid")
+		sl.Log.Error("build session id cannot be empty (env SL_BUILD_SESSION_ID)")
+		return fmt.Errorf("build session id cannot be empty (env SL_BUILD_SESSION_ID)")
 	}
-
-	fmt.Println(proxy)
 
 	bytes, err := ioutil.ReadFile(filepath.Join(stager.BuildDir(), "Procfile"))
 	if err != nil {
@@ -52,24 +49,22 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	}
 
 	splitted := strings.Split(string(bytes), " ")
-	web := splitted[0]
 	app := splitted[2]
 
-	fmt.Println("web: ", web, "app: ", app)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("web: node ./node_modules/.bin/slnodejs run  --useinitialcolor true --token %s --buildsessionid %s ", token, bsid))
 
-	final := web + sl_cli_template + fmt.Sprintf(" --token %s --buildsessionid %s ", token, bsid)
 	if proxy != "" {
-		final += fmt.Sprintf(" --proxy %s ", proxy)
+		sb.WriteString(fmt.Sprintf(" --proxy %s ", proxy))
 	}
 
-	final += " --useinitialcolor true "
-	final += app
+	sb.WriteString(fmt.Sprintf(" %s", app))
 
-	sl.Log.Info("new command line: %s", final)
+	sl.Log.Debug("new command line: %s", sb.String())
 
-	err = ioutil.WriteFile(filepath.Join(stager.BuildDir(), "Procfile"), []byte(final), 0700)
+	err = ioutil.WriteFile(filepath.Join(stager.BuildDir(), "Procfile"), []byte(sb.String()), 0755)
 	if err != nil {
-		sl.Log.Error("failed to write Procfile, error: %s", err)
+		sl.Log.Error("failed to update Procfile, error: %s", err)
 		return err
 	}
 
