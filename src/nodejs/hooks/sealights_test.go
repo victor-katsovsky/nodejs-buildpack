@@ -9,36 +9,59 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var _ = Describe("Sealights hook", func() {
 	var (
-		err       error
-		logger    *libbuildpack.Logger
-		stager    *libbuildpack.Stager
-		buffer    *bytes.Buffer
-		sealights hooks.SealightsHook
-		token     string
-		build     string
-		proxy     string
-		expected  = "node ./node_modules/.bin/slnodejs run  --useinitialcolor true --token application_token --buildsessionid build312 --proxy http://localhost:1886 index.js"
+		err          error
+		buildDir     string
+		logger       *libbuildpack.Logger
+		buffer       *bytes.Buffer
+		stager       *libbuildpack.Stager
+		sealights    *hooks.SealightsHook
+		token        string
+		build        string
+		proxy        string
+		procfile     string
+		testProcfile = "web: node index.js --build 192 --name Good"
+		expected     = strings.ReplaceAll("web: node ./node_modules/.bin/slnodejs run  --useinitialcolor true --token application_token --buildsessionid build312 --proxy http://localhost:1886 index.js --build 192 --name Good", " ", "")
 	)
 
 	BeforeEach(func() {
+		buildDir, err = ioutil.TempDir("", "nodejs-buildpack.build.")
+		Expect(err).To(BeNil())
+
+		buffer = new(bytes.Buffer)
+		logger = libbuildpack.NewLogger(buffer)
+		args := []string{buildDir, ""}
+		stager = libbuildpack.NewStager(args, logger, &libbuildpack.Manifest{})
+
 		token = os.Getenv("SL_TOKEN")
 		build = os.Getenv("SL_BUILD_SESSION_ID")
 		proxy = os.Getenv("SL_PROXY")
-		buffer = new(bytes.Buffer)
-		logger = libbuildpack.NewLogger(buffer)
+		err = ioutil.WriteFile(filepath.Join(stager.BuildDir(), "Procfile"), []byte(testProcfile), 0755)
+		Expect(err).To(BeNil())
+
+		sealights = &hooks.SealightsHook{
+			libbuildpack.DefaultHook{},
+			logger,
+			&libbuildpack.Command{},
+		}
 	})
 
 	AfterEach(func() {
 		err = os.Setenv("SL_TOKEN", token)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(BeNil())
 		err = os.Setenv("SL_BUILD_SESSION_ID", build)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(BeNil())
 		err = os.Setenv("SL_PROXY", proxy)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(BeNil())
+		err = ioutil.WriteFile(filepath.Join(stager.BuildDir(), "Procfile"), []byte(procfile), 0755)
+		Expect(err).To(BeNil())
+
+		err = os.RemoveAll(buildDir)
+		Expect(err).To(BeNil())
 	})
 
 	Describe("AfterCompile", func() {
@@ -47,7 +70,7 @@ var _ = Describe("Sealights hook", func() {
 			bsid  = "build312"
 			proxy = "http://localhost:1886"
 		)
-		Context("VCAP_SERVICES contains seeker service - as a user provided service", func() {
+		Context("build new application run command in Procfile", func() {
 			BeforeEach(func() {
 				err = os.Setenv("SL_TOKEN", token)
 				Expect(err).NotTo(HaveOccurred())
@@ -57,23 +80,24 @@ var _ = Describe("Sealights hook", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("test application run cmd creation", func() {
-				err = sealights.AfterCompile(stager)
+				err = sealights.SetApplicationStart(stager)
 				Expect(err).NotTo(HaveOccurred())
 				bytes, err := ioutil.ReadFile(filepath.Join(stager.BuildDir(), "Procfile"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(bytes)).To(Equal(expected))
+				cleanResult := strings.ReplaceAll(string(bytes), " ", "")
+				Expect(cleanResult).To(Equal(expected))
 			})
 			It("hook fails with empty token", func() {
 				err = os.Setenv("SL_TOKEN", "")
 				Expect(err).NotTo(HaveOccurred())
-				err = sealights.AfterCompile(stager)
-				Expect(err).To(MatchError(ContainSubstring(sealights.EmptyTokenError)))
+				err = sealights.SetApplicationStart(stager)
+				Expect(err).To(MatchError(ContainSubstring(hooks.EmptyTokenError)))
 			})
 			It("hook fails with empty build session id", func() {
 				err = os.Setenv("SL_BUILD_SESSION_ID", "")
 				Expect(err).NotTo(HaveOccurred())
-				err = sealights.AfterCompile(stager)
-				Expect(err).To(MatchError(ContainSubstring(sealights.EmptyBuildError)))
+				err = sealights.SetApplicationStart(stager)
+				Expect(err).To(MatchError(ContainSubstring(hooks.EmptyBuildError)))
 			})
 		})
 	})

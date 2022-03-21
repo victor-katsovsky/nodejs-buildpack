@@ -9,12 +9,13 @@ import (
 	"strings"
 )
 
+const EmptyTokenError = "token cannot be empty (env SL_TOKEN)"
+const EmptyBuildError = "build session id cannot be empty (env SL_BUILD_SESSION_ID)"
+
 type SealightsHook struct {
 	libbuildpack.DefaultHook
-	Log             *libbuildpack.Logger
-	Command         *libbuildpack.Command
-	EmptyTokenError string `default:"token cannot be empty (env SL_TOKEN)"`
-	EmptyBuildError string `default:"build session id cannot be empty (env SL_BUILD_SESSION_ID)"`
+	Log     *libbuildpack.Logger
+	Command *libbuildpack.Command
 }
 
 func init() {
@@ -29,21 +30,30 @@ func init() {
 func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	sl.Log.Info("Inside Sealights hook")
 
+	err := sl.SetApplicationStart(stager)
+	if err != nil {
+		return err
+	}
+
+	err = sl.installAgent(stager)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sl *SealightsHook) SetApplicationStart(stager *libbuildpack.Stager) error {
 	token := os.Getenv("SL_TOKEN")
 	bsid := os.Getenv("SL_BUILD_SESSION_ID")
 	proxy := os.Getenv("SL_PROXY")
 	if token == "" {
-		sl.Log.Error(sl.EmptyTokenError)
-		return fmt.Errorf(sl.EmptyTokenError)
+		sl.Log.Error(EmptyTokenError)
+		return fmt.Errorf(EmptyTokenError)
 	}
 	if bsid == "" {
-		sl.Log.Error(sl.EmptyBuildError)
-		return fmt.Errorf(sl.EmptyBuildError)
-	}
-
-	err := sl.installAgent(stager)
-	if err != nil {
-		return err
+		sl.Log.Error(EmptyBuildError)
+		return fmt.Errorf(EmptyBuildError)
 	}
 
 	bytes, err := ioutil.ReadFile(filepath.Join(stager.BuildDir(), "Procfile"))
@@ -53,6 +63,7 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 	}
 
 	split := strings.SplitAfter(string(bytes), "node")
+	// we suppose that format is "web: node <application>"
 	app := split[1]
 
 	newCmd := sl.createAppStartCommandLine(app, token, bsid, proxy)
