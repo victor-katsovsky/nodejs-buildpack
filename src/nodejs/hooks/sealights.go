@@ -52,8 +52,8 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 		return err
 	}
 
-	split := strings.Split(string(bytes), " ")
-	app := split[2]
+	split := strings.SplitAfter(string(bytes), "node")
+	app := split[1]
 
 	newCmd := sl.createAppStartCommandLine(app, token, bsid, proxy)
 
