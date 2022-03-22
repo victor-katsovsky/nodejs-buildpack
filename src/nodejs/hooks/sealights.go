@@ -9,13 +9,26 @@ import (
 	"strings"
 )
 
-const EmptyTokenError = "token cannot be empty (env SL_TOKEN)"
-const EmptyBuildError = "build session id cannot be empty (env SL_BUILD_SESSION_ID)"
+const EmptyTokenError = "token cannot be empty (env SL_TOKEN | SL_TOKEN_FILE)"
+const EmptyBuildError = "build session id cannot be empty (env SL_BUILD_SESSION_ID | SL_BUILD_SESSION_ID_FILE)"
+const Procfile = "Procfile"
 
 type SealightsHook struct {
 	libbuildpack.DefaultHook
 	Log     *libbuildpack.Logger
 	Command *libbuildpack.Command
+}
+
+type SealightsOptions struct {
+	Token       string
+	TokenFile   string
+	BsId        string
+	BsIdFile    string
+	Proxy       string
+	LabId       string
+	ProjectRoot string
+	TestStage   string
+	App         string
 }
 
 func init() {
@@ -44,35 +57,39 @@ func (sl *SealightsHook) AfterCompile(stager *libbuildpack.Stager) error {
 }
 
 func (sl *SealightsHook) SetApplicationStart(stager *libbuildpack.Stager) error {
-	token := os.Getenv("SL_TOKEN")
-	bsid := os.Getenv("SL_BUILD_SESSION_ID")
-	proxy := os.Getenv("SL_PROXY")
-	if token == "" {
-		sl.Log.Error(EmptyTokenError)
-		return fmt.Errorf(EmptyTokenError)
-	}
-	if bsid == "" {
-		sl.Log.Error(EmptyBuildError)
-		return fmt.Errorf(EmptyBuildError)
-	}
-
-	bytes, err := ioutil.ReadFile(filepath.Join(stager.BuildDir(), "Procfile"))
+	bytes, err := ioutil.ReadFile(filepath.Join(stager.BuildDir(), Procfile))
 	if err != nil {
-		sl.Log.Error("failed to read Procfile")
+		sl.Log.Error("failed to read %s", Procfile)
 		return err
 	}
 
-	split := strings.SplitAfter(string(bytes), "node")
 	// we suppose that format is "web: node <application>"
-	app := split[1]
+	split := strings.SplitAfter(string(bytes), "node")
 
-	newCmd := sl.createAppStartCommandLine(app, token, bsid, proxy)
+	o := &SealightsOptions{
+		Token:       os.Getenv("SL_TOKEN"),
+		TokenFile:   os.Getenv("SL_TOKEN_FILE"),
+		BsId:        os.Getenv("SL_BUILD_SESSION_ID"),
+		BsIdFile:    os.Getenv("SL_BUILD_SESSION_ID_FILE"),
+		Proxy:       os.Getenv("SL_PROXY"),
+		LabId:       os.Getenv("SL_LAB_ID"),
+		ProjectRoot: os.Getenv("SL_PROJECT_ROOT"),
+		TestStage:   os.Getenv("SL_TEST_STAGE"),
+		App:         split[1],
+	}
+
+	err = sl.validate(o)
+	if err != nil {
+		return err
+	}
+
+	newCmd := sl.createAppStartCommandLine(o)
 
 	sl.Log.Debug("new command line: %s", newCmd)
 
-	err = ioutil.WriteFile(filepath.Join(stager.BuildDir(), "Procfile"), []byte(newCmd), 0755)
+	err = ioutil.WriteFile(filepath.Join(stager.BuildDir(), Procfile), []byte(newCmd), 0755)
 	if err != nil {
-		sl.Log.Error("failed to update Procfile, error: %s", err)
+		sl.Log.Error("failed to update %s, error: %s", Procfile, err.Error())
 		return err
 	}
 
@@ -89,14 +106,52 @@ func (sl *SealightsHook) installAgent(stager *libbuildpack.Stager) error {
 	return nil
 }
 
-func (sl *SealightsHook) createAppStartCommandLine(app, token, bsid, proxy string) string {
+func (sl *SealightsHook) createAppStartCommandLine(o *SealightsOptions) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("web: node ./node_modules/.bin/slnodejs run  --useinitialcolor true --token %s --buildsessionid %s ", token, bsid))
+	sb.WriteString("web: node ./node_modules/.bin/slnodejs run  --useinitialcolor true ")
 
-	if proxy != "" {
-		sb.WriteString(fmt.Sprintf(" --proxy %s ", proxy))
+	if o.TokenFile != "" {
+		sb.WriteString(fmt.Sprintf(" --tokenfile %s", o.TokenFile))
+	} else {
+		sb.WriteString(fmt.Sprintf(" --token %s", o.Token))
 	}
 
-	sb.WriteString(fmt.Sprintf(" %s", app))
+	if o.BsIdFile != "" {
+		sb.WriteString(fmt.Sprintf(" --buildsessionidfile %s", o.BsIdFile))
+	} else {
+		sb.WriteString(fmt.Sprintf(" --buildsessionid %s", o.BsId))
+	}
+
+	if o.Proxy != "" {
+		sb.WriteString(fmt.Sprintf(" --proxy %s ", o.Proxy))
+	}
+
+	if o.LabId != "" {
+		sb.WriteString(fmt.Sprintf(" --labid %s ", o.LabId))
+	}
+
+	if o.ProjectRoot != "" {
+		sb.WriteString(fmt.Sprintf(" --projectroot %s ", o.ProjectRoot))
+	}
+
+	if o.TestStage != "" {
+		sb.WriteString(fmt.Sprintf(" --teststage %s ", o.TestStage))
+	}
+
+	sb.WriteString(fmt.Sprintf(" %s", o.App))
 	return sb.String()
+}
+
+func (sl *SealightsHook) validate(o *SealightsOptions) error {
+	if o.Token == "" && o.TokenFile == "" {
+		sl.Log.Error(EmptyTokenError)
+		return fmt.Errorf(EmptyTokenError)
+	}
+
+	if o.BsId == "" && o.BsIdFile == "" {
+		sl.Log.Error(EmptyBuildError)
+		return fmt.Errorf(EmptyBuildError)
+	}
+
+	return nil
 }
