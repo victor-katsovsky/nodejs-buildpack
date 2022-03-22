@@ -134,8 +134,9 @@ func (sl *SealightsHook) createAppStartCommandLine(o *SealightsOptions) string {
 		sb.WriteString(fmt.Sprintf(" --projectroot %s ", o.ProjectRoot))
 	}
 
+	// test stage contains white space(e.g. "Unit Tests", make it quoted
 	if o.TestStage != "" {
-		sb.WriteString(fmt.Sprintf(" --teststage %s ", o.TestStage))
+		sb.WriteString(fmt.Sprintf(" --teststage \"%s\" ", o.TestStage))
 	}
 
 	sb.WriteString(fmt.Sprintf(" %s", o.App))

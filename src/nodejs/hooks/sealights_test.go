@@ -28,8 +28,8 @@ var _ = Describe("Sealights hook", func() {
 		testStage         string
 		procfile          string
 		testProcfile      = "web: node index.js --build 192 --name Good"
-		expected          = strings.ReplaceAll("web: node ./node_modules/.bin/slnodejs run  --useinitialcolor true --token good_token --buildsessionid goodBsid --proxy http://localhost:1886 --labid Roni's --projectroot project/root --teststage UnitTests index.js --build 192 --name Good", " ", "")
-		expectedWithFiles = strings.ReplaceAll("web: node ./node_modules/.bin/slnodejs run  --useinitialcolor true --tokenfile application/token/file --buildsessionidfile build/id/file --proxy http://localhost:1886 --labid Roni's --projectroot project/root --teststage UnitTests index.js --build 192 --name Good", " ", "")
+		expected          = strings.ReplaceAll("web: node ./node_modules/.bin/slnodejs run  --useinitialcolor true --token good_token --buildsessionid goodBsid --proxy http://localhost:1886 --labid Roni's --projectroot project/root --teststage \"Unit Tests\" index.js --build 192 --name Good", " ", "")
+		expectedWithFiles = strings.ReplaceAll("web: node ./node_modules/.bin/slnodejs run  --useinitialcolor true --tokenfile application/token/file --buildsessionidfile build/id/file --proxy http://localhost:1886 --labid Roni's --projectroot project/root --teststage \"Unit Tests\" index.js --build 192 --name Good", " ", "")
 	)
 
 	BeforeEach(func() {
